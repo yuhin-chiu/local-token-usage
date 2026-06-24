@@ -260,10 +260,21 @@ const RANGE_BTNS: { r: Range; label: string }[] = [
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const [range, setRange] = useState<Range>(7);
+  const [range, setRange] = useState<Range>("today");
   const [data, setData] = useState<UsageSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("ai-usage-theme") as "dark" | "light" | null;
+    if (saved) setTheme(saved);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme === "light" ? "light" : "";
+    localStorage.setItem("ai-usage-theme", theme);
+  }, [theme]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -353,7 +364,29 @@ export default function DashboardPage() {
   const colHead: React.CSSProperties = { fontSize: 10, textTransform: "uppercase", letterSpacing: "0.12em", color: "#38384e", fontWeight: 700 };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#07090e", fontFamily: "var(--font-syne), Syne, system-ui, sans-serif", color: "#e0e0f0" }}>
+    <div style={{ minHeight: "100vh", background: "var(--theme-bg)", fontFamily: "var(--font-syne), Syne, system-ui, sans-serif", color: "var(--theme-text)" }}>
+      {/* Theme toggle */}
+      <button
+        onClick={() => setTheme(t => t === "dark" ? "light" : "dark")}
+        style={{
+          position: "fixed",
+          top: 16,
+          right: 16,
+          zIndex: 1000,
+          background: "var(--theme-surface)",
+          border: "1px solid var(--theme-border)",
+          borderRadius: 8,
+          padding: "6px 10px",
+          cursor: "pointer",
+          fontSize: 18,
+          lineHeight: 1,
+          color: "var(--theme-text)",
+        }}
+        title={theme === "dark" ? "切换日间模式" : "切换暗黑模式"}
+      >
+        {theme === "dark" ? "☀️" : "🌙"}
+      </button>
+
       {/* Ambient glows */}
       <div style={{
         position: "fixed", inset: 0, pointerEvents: "none",
@@ -368,7 +401,7 @@ export default function DashboardPage() {
         {/* ── HEADER ─────────────────────────────────────────── */}
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 24, gap: 16, flexWrap: "wrap" }}>
           <div>
-            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em", color: "#eeeef8" }}>AI Usage</h1>
+            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em", color: "var(--theme-text)" }}>AI Usage</h1>
             <p style={{ margin: "4px 0 0", fontSize: 12, color: "#44445a" }}>Claude Code · Codex CLI · local data only</p>
           </div>
 

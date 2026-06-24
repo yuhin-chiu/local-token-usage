@@ -16,9 +16,27 @@
   --font-mono: var(--font-geist-mono);
 }
 
+:root {
+  --theme-bg: #07090e;
+  --theme-bg-body: #09090b;
+  --theme-text: #fafafa;
+  --theme-muted: #71717a;
+  --theme-surface: rgba(255, 255, 255, 0.04);
+  --theme-border: rgba(63, 63, 70, 0.45);
+}
+
+html[data-theme="light"] {
+  --theme-bg: #f2e5d9;
+  --theme-bg-body: #faf3ec;
+  --theme-text: #18181b;
+  --theme-muted: #52525b;
+  --theme-surface: rgba(0, 0, 0, 0.03);
+  --theme-border: rgba(203, 213, 225, 0.9);
+}
+
 html, body {
-  background: #09090b;
-  color: #fafafa;
+  background: var(--theme-bg-body);
+  color: var(--theme-text);
   font-family: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
@@ -28,7 +46,11 @@ body {
     radial-gradient(800px 480px at 95% 0%, rgba(167, 139, 250, 0.12), transparent 60%),
     radial-gradient(1100px 700px at 50% 120%, rgba(52, 211, 153, 0.06), transparent 60%);
   background-attachment: fixed;
-  background-color: #09090b;
+  background-color: var(--theme-bg-body);
+}
+
+html[data-theme="light"] body {
+  background-image: none;
 }
 
 * { -webkit-font-smoothing: antialiased; }
