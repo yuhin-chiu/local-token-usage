@@ -145,6 +145,32 @@
 
 ## 插件侧待办（`local-token-usage-plugin`）
 
+### 新增 `/ai-usage:update` 命令（版本锁定方案）
+
+**背景：** 目前用户 `/plugin update ai-usage` 只更新插件命令文件，本机 `~/ai-usage` 的看板代码不会自动更新。直接 `git pull` 最新代码又可能与旧版插件命令不兼容。
+
+**方案：两个 repo 用同一版本号做锚点，通过 git tag 精确锁定。**
+
+核心设计：
+- 每次发布时，dashboard repo 和 plugin repo 打相同版本 tag（如 `v1.0.6`）
+- `init.md` 安装成功后，在安装目录写 `~/ai-usage/.installed-version`，内容为当前插件版本号
+- `update.md` 执行逻辑：
+  1. 读 `${plugin_dir}/.claude-plugin/plugin.json` → 当前插件版本
+  2. 读 `~/ai-usage/.installed-version` → 本机已安装版本
+  3. 若相同 → 提示"已是最新，无需更新"，退出
+  4. 若不同 → `git fetch --tags` + `git checkout v{插件版本}` + `npm install` + `npm run build` + 重启服务 + 更新 `.installed-version`
+
+**关键优势：** `git checkout` 到精确 tag，而非 pull latest，确保代码与插件命令版本始终一致。
+
+**影响范围：**
+- 新建 `D:\code2\ai-usage-plugin\commands\update.md`
+- 修改 `D:\code2\ai-usage-plugin\commands\init.md`（增加写 `.installed-version` 步骤）
+- `.claude-plugin/plugin.json` 追加 update 命令 + bump version
+- `CHANGELOG.md` + `README.md` 更新
+- dashboard repo 发布流程加打 tag 步骤
+
+---
+
 ### 支持多工具选择配置
 
 **背景：** 目前插件硬编码只读取 Claude Code（`~/.claude/`）和 Codex CLI（`~/.codex/`）两个数据源。未来需要支持 Cursor、Cherry 等更多工具，且不同用户使用的工具不同（有人根本不用 Codex）。
