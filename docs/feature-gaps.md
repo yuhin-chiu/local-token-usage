@@ -145,6 +145,23 @@
 
 ## 插件侧待办（`local-token-usage-plugin`）
 
+### 支持多工具选择配置
+
+**背景：** 目前插件硬编码只读取 Claude Code（`~/.claude/`）和 Codex CLI（`~/.codex/`）两个数据源。未来需要支持 Cursor、Cherry 等更多工具，且不同用户使用的工具不同（有人根本不用 Codex）。
+
+**方案：**
+- `init.md` 安装时用 `AskUserQuestion` 让用户勾选已安装的工具（多选，默认全选 Claude Code）
+- 将选择结果写入配置文件（如 `ai-usage.config.json`），字段 `enabledSources: ["claude", "codex"]`
+- `query.md` 读取配置文件，只统计已启用的数据源，跳过未启用的（即使目录存在也忽略）
+- 后续新增 Cursor / Cherry 等工具时，只需在配置文件 schema 和 query 脚本里扩展，不改 init 逻辑
+
+**影响范围：**
+- `D:\code2\ai-usage-plugin\commands\init.md`
+- `D:\code2\ai-usage-plugin\commands\query.md`
+- 新增 `ai-usage.config.json` schema 设计
+
+---
+
 ### 支持配置文件修改端口
 
 **背景：** 目前端口 3002 硬编码在 `ecosystem.config.js` 和所有 plugin command 文件中，用户如果本机 3002 被占用，无法修改，只能手动改源码。
