@@ -1,38 +1,41 @@
-# Dashboard 功能差距分析
+# Dashboard 功能差距明细（参考）
 
-新页面（`/dashboard`）相对老页面（`/`）缺失的功能，用于后续迭代参考。
+新页面（`/dashboard`）相对老页面（`/`）缺失的功能，作为各仪表盘任务的**详细规格参考**。
 分析完成后可删除老页面代码（`src/app/page.tsx` + `src/app/_components/`）。
+
+> **任务跟踪已迁移到 [`jobs/`](jobs/)** —— 本文件只保留差距明细供查阅，不再做状态管理。
+> 各小节标题的 `[任务ID]` 对应 `jobs/backlog.md` 中的任务。
 
 ---
 
-## 快速汇总
+## 快速汇总（差距明细 → 所属任务）
 
-| # | 功能点 | 优先级建议 |
-|---|--------|-----------|
-| 1 | Tokens / Cost 切换（影响图表和卡片） | 高 |
-| 2 | DailyChart：XAxis / YAxis / 网格线 / Tooltip 悬停 | 高 |
-| 3 | DailyChart：cost 视图切换 | 高 |
-| 4 | SourceSplit：横向比例条 + 百分比显示 | 高 |
-| 5 | StatCard：Cache tokens 展示 | 中 |
-| 6 | StatCard：avg cost/session | 中 |
-| 7 | StatCard：内嵌迷你 TrendChart 面积图 | 中 |
-| 8 | 两张 ModelTable（历史 + 今日并列） | 中 |
-| 9 | ModelTable：Source 文字 badge 列 | 中 |
-| 10 | ModelTable：原始完整 model 名称 | 中 |
-| 11 | Rate Limit：无数据占位状态 | 中 |
-| 12 | Rate Limit：planType badge + 图标 | 低 |
-| 13 | API warnings 提示 | 低 |
-| 14 | Header 实时脉动点（live-dot） | 低 |
-| 15 | Refresh 按钮旋转动画 | 低 |
-| 16 | 自动刷新间隔从 30s 改回 15s | 低 |
-| 17 | Footer 路径高亮 | 低 |
-| 18 | grid-noise 噪点纹理背景 | 低 |
+| # | 功能点 | 优先级建议 | 所属任务 |
+|---|--------|-----------|---------|
+| 1 | Tokens / Cost 切换（影响图表和卡片） | 高 | `metric-toggle` |
+| 2 | DailyChart：XAxis / YAxis / 网格线 / Tooltip 悬停 | 高 | `daily-chart` |
+| 3 | DailyChart：cost 视图切换 | 高 | `daily-chart` |
+| 4 | SourceSplit：横向比例条 + 百分比显示 | 高 | `source-split` |
+| 5 | StatCard：Cache tokens 展示 | 中 | `stat-card` |
+| 6 | StatCard：avg cost/session | 中 | `stat-card` |
+| 7 | StatCard：内嵌迷你 TrendChart 面积图 | 中 | `stat-card` |
+| 8 | 两张 ModelTable（历史 + 今日并列） | 中 | `model-table` |
+| 9 | ModelTable：Source 文字 badge 列 | 中 | `model-table` |
+| 10 | ModelTable：原始完整 model 名称 | 中 | `model-table` |
+| 11 | Rate Limit：无数据占位状态 | 中 | `rate-limit` |
+| 12 | Rate Limit：planType badge + 图标 | 低 | `rate-limit` |
+| 13 | API warnings 提示 | 低 | `polish` |
+| 14 | Header 实时脉动点（live-dot） | 低 | `polish` |
+| 15 | Refresh 按钮旋转动画 | 低 | `polish` |
+| 16 | 自动刷新间隔从 30s 改回 15s | 低 | `polish` |
+| 17 | Footer 路径高亮 | 低 | `polish` |
+| 18 | grid-noise 噪点纹理背景 | 低 | `polish` |
 
 ---
 
 ## 详细说明
 
-### 一、Tokens / Cost 切换
+### [metric-toggle] 一、Tokens / Cost 切换
 
 **老页面**：Header 有 Tokens / Cost 分段选择器，选择后影响 DailyChart 和 StatCard 内嵌迷你图的展示维度。
 
@@ -40,7 +43,7 @@
 
 ---
 
-### 二、DailyChart / TrendChart 图表功能
+### [daily-chart] 二、DailyChart / TrendChart 图表功能
 
 **老页面**：使用 recharts `BarChart`（高 300px），具备：
 - XAxis 日期标签（`preserveStartEnd` 模式，minTickGap=32）
@@ -59,7 +62,7 @@
 
 ---
 
-### 三、SourceSplit 数据源分布
+### [source-split] 三、SourceSplit 数据源分布
 
 **老页面**：独立 `SourceSplit` 组件，固定展示 Today 数据，包含：
 - 横向分段比例条（Claude 橙 + Codex 紫）
@@ -73,7 +76,7 @@
 
 ---
 
-### 四、StatCard 统计卡片
+### [stat-card] 四、StatCard 统计卡片
 
 **老页面**：
 - 卡片 1 副文字：`In {输入} · Out {输出} · Cache {缓存}`（含 cache token 细分）
@@ -89,7 +92,7 @@
 
 ---
 
-### 五、ModelTable 模型用量表
+### [model-table] 五、ModelTable 模型用量表
 
 **老页面**：同时展示两张独立表格：
 - 表 1：历史期间 Top Models（`data.models`，跨日期汇总，前 10 条）
@@ -106,7 +109,7 @@
 
 ---
 
-### 六、Rate Limit 限流展示
+### [rate-limit] 六、Rate Limit 限流展示
 
 **老页面**：
 - 无数据时仍显示占位卡片："No rate-limit signal yet."
@@ -121,7 +124,7 @@
 
 ---
 
-### 七、其他细节
+### [polish] 七、其他细节
 
 | 功能 | 老页面 | 新页面 |
 |------|--------|--------|
@@ -138,70 +141,5 @@
 ## 备注
 
 - 新页面**新增**的功能（老页面没有）：Today / Yesterday 单日视图、Daily Breakdown 列表（DailyRow）
-- 删除老页面前建议先把上表中"高优先级"功能补齐
+- 删除老页面前建议先把"高优先级"任务补齐
 - 老页面文件：`src/app/page.tsx` + `src/app/_components/`（7 个组件文件）
-
----
-
-## 插件侧待办（`local-token-usage-plugin`）
-
-### 新增 `/ai-usage:update` 命令（版本锁定方案）
-
-**背景：** 目前用户 `/plugin update ai-usage` 只更新插件命令文件，本机 `~/ai-usage` 的看板代码不会自动更新。直接 `git pull` 最新代码又可能与旧版插件命令不兼容。
-
-**方案：两个 repo 用同一版本号做锚点，通过 git tag 精确锁定。**
-
-核心设计：
-- 每次发布时，dashboard repo 和 plugin repo 打相同版本 tag（如 `v1.0.6`）
-- `init.md` 安装成功后，在安装目录写 `~/ai-usage/.installed-version`，内容为当前插件版本号
-- `update.md` 执行逻辑：
-  1. 读 `${plugin_dir}/.claude-plugin/plugin.json` → 当前插件版本
-  2. 读 `~/ai-usage/.installed-version` → 本机已安装版本
-  3. 若相同 → 提示"已是最新，无需更新"，退出
-  4. 若不同 → `git fetch --tags` + `git checkout v{插件版本}` + `npm install` + `npm run build` + 重启服务 + 更新 `.installed-version`
-
-**关键优势：** `git checkout` 到精确 tag，而非 pull latest，确保代码与插件命令版本始终一致。
-
-**影响范围：**
-- 新建 `D:\code2\ai-usage-plugin\commands\update.md`
-- 修改 `D:\code2\ai-usage-plugin\commands\init.md`（增加写 `.installed-version` 步骤）
-- `.claude-plugin/plugin.json` 追加 update 命令 + bump version
-- `CHANGELOG.md` + `README.md` 更新
-- dashboard repo 发布流程加打 tag 步骤
-
----
-
-### 支持多工具选择配置
-
-**背景：** 目前插件硬编码只读取 Claude Code（`~/.claude/`）和 Codex CLI（`~/.codex/`）两个数据源。未来需要支持 Cursor、Cherry 等更多工具，且不同用户使用的工具不同（有人根本不用 Codex）。
-
-**方案：**
-- `init.md` 安装时用 `AskUserQuestion` 让用户勾选已安装的工具（多选，默认全选 Claude Code）
-- 将选择结果写入配置文件（如 `ai-usage.config.json`），字段 `enabledSources: ["claude", "codex"]`
-- `query.md` 读取配置文件，只统计已启用的数据源，跳过未启用的（即使目录存在也忽略）
-- 后续新增 Cursor / Cherry 等工具时，只需在配置文件 schema 和 query 脚本里扩展，不改 init 逻辑
-
-**影响范围：**
-- `D:\code2\ai-usage-plugin\commands\init.md`
-- `D:\code2\ai-usage-plugin\commands\query.md`
-- 新增 `ai-usage.config.json` schema 设计
-
----
-
-### 支持配置文件修改端口
-
-**背景：** 目前端口 3002 硬编码在 `ecosystem.config.js` 和所有 plugin command 文件中，用户如果本机 3002 被占用，无法修改，只能手动改源码。
-
-**方案：**
-- 在 dashboard 根目录引入配置文件（如 `ai-usage.config.json`），支持配置 `port`
-- `ecosystem.config.js` 读取该配置文件中的端口，优先级高于默认值
-- Plugin 的 `init.md` 在安装时询问用户端口（默认 3002），写入配置文件
-- `start.md` / `status.md` / `open.md` 也从配置文件读取端口，不再 hardcode 3002
-
-**影响范围：**
-- `D:\code2\ai-usage\ecosystem.config.js`
-- `D:\code2\ai-usage\src\app\api\usage\route.ts`（如涉及）
-- `D:\code2\ai-usage-plugin\commands\init.md`
-- `D:\code2\ai-usage-plugin\commands\start.md`
-- `D:\code2\ai-usage-plugin\commands\status.md`
-- `D:\code2\ai-usage-plugin\commands\open.md`
