@@ -3,7 +3,7 @@ import path from "node:path";
 import type { SourceId } from "./types";
 
 /**
- * App-level configuration, read from `ai-usage.config.json` in the project root.
+ * App-level configuration, read from `local-usage.config.json` in the project root.
  * The file is optional — when absent or malformed, sensible defaults are used so
  * existing single/dual-source installs keep working with zero config.
  */
@@ -22,7 +22,7 @@ const DEFAULT_CONFIG: AppConfig = {
   port: 3002,
 };
 
-const CONFIG_FILENAME = "ai-usage.config.json";
+const CONFIG_FILENAME = "local-usage.config.json";
 
 function sanitizeSources(raw: unknown): SourceId[] {
   if (!Array.isArray(raw)) return [...DEFAULT_CONFIG.enabledSources];

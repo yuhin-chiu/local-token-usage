@@ -72,5 +72,5 @@ UI colors key off `event.source` — no UI changes needed.
 - **Tailwind v4**: Uses `@tailwindcss/postcss` plugin (no `tailwind.config.ts`). Design tokens defined in `src/app/globals.css` via `@theme inline {}`. Custom accent colors: `accent-claude` (#d97757), `accent-codex` (#a78bfa), plus `surface`, `border`, `muted`.
 - **Light/dark mode**: Dashboard supports a toggle; dark default uses `#09090b` background with radial gradient glows.
 - **Key deps**: `recharts` for charts, `lucide-react` for icons, `date-fns` for date math, `clsx` for classnames.
-- **PM2 deployment**: Production runs under PM2 (`ecosystem.config.js`, process name `ai-usage`). After code changes: `npm run build` → `npx pm2 restart ai-usage --update-env` → `npx pm2 save`. Full details in `docs/deployment.md`.
+- **PM2 deployment**: Production runs under PM2 (`ecosystem.config.js`, process name `local-usage`). After code changes: `npm run build` → `npx pm2 restart local-usage --update-env` → `npx pm2 save`. Full details in `docs/deployment.md`.
 - **No `.cursorrules` or Copilot instructions** exist in this repo.

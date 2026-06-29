@@ -8,7 +8,7 @@
 | 项 | 值 |
 | --- | --- |
 | 进程管理器 | PM2 (`pm2@7`) |
-| 进程名 | `ai-usage`（见 `ecosystem.config.js`） |
+| 进程名 | `local-usage`（见 `ecosystem.config.js`） |
 | 启动命令 | `next start -p 3002`（生产构建，**不是** `next dev`） |
 | 端口 | `3002` |
 | 工作目录 | 项目根目录 `D:\projects\ai-usage` |
@@ -37,18 +37,18 @@ HKCU\Software\Microsoft\Windows\CurrentVersion\Run
 ```bash
 # 查看状态 / 日志
 npx pm2 status
-npx pm2 logs ai-usage
-npx pm2 logs ai-usage --lines 100
+npx pm2 logs local-usage
+npx pm2 logs local-usage --lines 100
 
 # 改了代码后：重新构建并重启（关键步骤，生产构建不会热更新）
 npm run build
-npx pm2 restart ai-usage --update-env
+npx pm2 restart local-usage --update-env
 npx pm2 save          # 固化进程列表，保证开机自启恢复的是最新状态
 
 # 停止 / 启动 / 删除
-npx pm2 stop ai-usage
+npx pm2 stop local-usage
 npx pm2 start ecosystem.config.js
-npx pm2 delete ai-usage
+npx pm2 delete local-usage
 ```
 
 ### 首次部署（在一台新机器上）

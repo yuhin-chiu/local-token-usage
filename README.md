@@ -46,7 +46,7 @@ npm run start
 
 ### Windows 后台常驻 + 开机自启（推荐 PM2）
 
-本机就是用 **PM2** 托管 `ai-usage` 进程跑 `next start -p 3002`，配 `pm2-windows-startup`
+本机就是用 **PM2** 托管 `local-usage` 进程跑 `next start -p 3002`，配 `pm2-windows-startup`
 实现登录自启。完整的运行架构、自启原理和运维命令见
 **[docs/deployment.md](docs/deployment.md)**。
 
@@ -54,7 +54,7 @@ npm run start
 
 ```bash
 npm run build                          # 改代码后必须重新构建
-npx pm2 restart ai-usage --update-env  # 重启使其生效
+npx pm2 restart local-usage --update-env  # 重启使其生效
 npx pm2 save                           # 固化进程列表，保证开机自启恢复最新状态
 npx pm2 status                         # 查看状态
 ```
