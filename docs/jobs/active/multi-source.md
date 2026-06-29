@@ -14,7 +14,9 @@
   - 第 3 项（2026-06-29）：`aggregate.ts` 改为 `loadConfig()` 取 `enabledSources` → `getSourceModules()` 遍历 `read`，移除硬编码两源调用 + 删掉本地 rateLimit 映射（已在 registry）。`emptySourceMap`/`emptyDailyBySource`/`sessionsPerSource`/`todaySessionsPerSource`/today `bySource` 全部改为遍历 `ALL_SOURCE_IDS = Object.keys(SOURCE_REGISTRY)`，无硬编码 key。
   - 回测：grep 确认无残留源字面量；`tsc --noEmit` 通过；`next build` 编译+typecheck 全过。默认配置（无文件）= `["claude-code","codex"]`，claude/codex 运行时行为不变。
 - **上次进展（续）：** ✅ 阶段一 6 项全部完成（item 3~6 见各 checkbox）。已清理 `src/app/dashboard/_components/` 下 7 个死代码组件（chore commit）。
-- **下一步：** 阶段一收尾，可进**阶段二**（init 勾选 + 自动探测）。开工前需读 `ai-usage-plugin` 插件仓库的 `commands/init.md`。
+- **上次进展（续 2）：** ✅ 阶段二代码完成（插件仓 `init.md` 新增 Step 5 探测+选源+写配置+问端口；`plugin.json` 1.0.6→1.1.0；CHANGELOG）。**待用户实跑 `/local-usage:init` 端到端验证**。
+- **下一步：** 阶段三 —— `/config` 动态改配置（网页设置页 or 插件命令，待定）。另见 backlog 新增 `cmd-port-aware`（start/stop/status/open 仍写死 3002，自定义端口下会指错）。
+- **遗留小坑：** 插件 `start/stop/status/open` 命令里端口仍写死 3002；只有 init(PM2) 和"无 PM2 用 $PORT 启动"尊重自定义端口。自定义端口时这些命令会指向 3002。已记 backlog。
 - **已清理：** 删除了不可达的旧版 dashboard `src/app/page.tsx` + `src/app/_components/`（7 文件）。删后 `/` 仍由 next.config 重定向到 `/dashboard`（实测 307→200）。清理需 `rm -rf .next` 重新 build（Next 生成的类型校验器缓存了已删的 `/` 路由）。
 - **卡点：** 阶段四 Cursor 走 API 还是 count-only **待用户拍板**（不阻塞阶段一~三）。
 
@@ -88,12 +90,15 @@ type SourceModule = {
 - [x] 页面按返回的源列表 + capability 动态渲染（count-only 走精简卡片） — `page.tsx` 全部源相关区域遍历 `data.sources`，label/accent 从 `SOURCES` 查（带兜底）；token 图表只遍历 `capability==="token"` 源；count-only 走无成本精简显示。先并行建 `dashboard2/` 验证后替换进 `dashboard/`（2026-06-29）
 - [x] `ecosystem.config.js` 从 config 读端口（优先级高于默认 3002） — 顶部 `resolvePort()` 用 fs 读 `local-usage.config.json` 的 port（镜像 config.ts 校验，回退 3002）。验证：无配置→3002、port=4000→4000、非法→3002（2026-06-29）。**边界**：`package.json` 的 dev/start 仍写死 `-p 3002`（静态字符串）
 
-### 阶段二 — init 勾选 + 自动探测（🔲 未开始）
+### 阶段二 — init 勾选 + 自动探测（✅ 代码完成 2026-06-29，待端到端实跑验证）
 
-- [ ] `init.md` 自动探测已装工具（检测各源数据目录是否存在）
-- [ ] `AskUserQuestion` 多选，默认勾选探测到的工具（至少 claude-code）
-- [ ] 把选择写入 `local-usage.config.json` 的 `enabledSources`
-- [ ] `init.md` 同时询问端口（默认 3002）写入配置
+> 全在插件仓 `ai-usage-plugin/commands/init.md`（新增 Step 5）+ `plugin.json` bump 1.0.6→1.1.0 + CHANGELOG。dashboard 仓无改动（stage 1 已能读配置）。
+
+- [x] `init.md` 自动探测已装工具（检测 `~/.claude/projects`、`~/.codex/sessions`；bash + PowerShell 两套）— init.md Step 5a
+- [x] `AskUserQuestion` 多选，默认推荐探测到的工具（至少 claude-code）— Step 5b
+- [x] 把选择写入 `local-usage.config.json` 的 `enabledSources` — Step 5d（cat heredoc / Out-File 两套），写在启动服务前
+- [x] `init.md` 同时询问端口（默认 3002）写入配置 — Step 5c；无 PM2 模式改用 `next start -p $PORT` 以尊重自定义端口
+- 验证：本机实测了探测 + 写 JSON 的 shell 片段；**端到端 `/local-usage:init` 需用户实跑一次**（指令文档无法自测）
 
 ### 阶段三 — `/config` 动态改配置（🔲 未开始）
 

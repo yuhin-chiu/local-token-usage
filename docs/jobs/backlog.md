@@ -37,6 +37,12 @@ Header 加 Tokens / Cost 分段选择器，切换影响 DailyChart 与 StatCard 
 无数据时显示占位卡片；加 planType badge + Gauge/Timer 图标；统一三色阈值语义。
 详见 feature-gaps.md「六」。
 
+## [cmd-port-aware] 插件命令读取自定义端口（中）
+
+阶段二让 `/local-usage:init` 支持自定义端口并写入 `local-usage.config.json`，且 PM2 模式（ecosystem）与"无 PM2 用 `next start -p $PORT`"都已尊重该端口。但插件其余命令 `start`/`stop`/`status`/`open` 仍写死 `3002`（如 `open.md` 开 `http://localhost:3002/dashboard`、`status.md` 查 3002 端口）。自定义端口时这些命令会指错。
+
+**方案：** 这些命令先读 `$INSTALL_DIR/local-usage.config.json` 取 `port`（读不到回退 3002），再用该端口。涉及插件仓 `commands/{start,stop,status,open}.md`，需 bump 版本。发现于 2026-06-29 阶段二。
+
 ## [polish] UI 细节打磨（低）
 
 API warnings 提示、Refresh 旋转动画、Header live-dot、自动刷新 30s→15s、Footer 路径高亮、grid-noise 背景。

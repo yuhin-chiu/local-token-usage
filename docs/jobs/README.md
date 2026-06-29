@@ -10,7 +10,7 @@ ai-usage 多天任务总索引。**进入项目先读本文件。**
 
 | 任务 ID | 任务名 | 优先级 | 一句状态 |
 |---|---|---|---|
-| [`multi-source`](active/multi-source.md) | 多工具动态支持 | **P0 最高** | ✅ 阶段一全完成（config/registry/aggregate/API/页面/端口）；下一步阶段二 init 勾选探测 |
+| [`multi-source`](active/multi-source.md) | 多工具动态支持 | **P0 最高** | ✅ 阶段一+二代码完成（阶段二 init 探测+选源+写配置，待实跑验证）；下一步阶段三 /config |
 
 > WIP 限制 ≤2。
 
@@ -25,6 +25,7 @@ ai-usage 多天任务总索引。**进入项目先读本文件。**
 | `model-table` | ModelTable 双表增强 | 中 |
 | `rate-limit` | Rate Limit 展示增强 | 中 |
 | `plugin-update` | 插件版本锁定更新 | 中 |
+| `cmd-port-aware` | 插件命令读取自定义端口 | 中 |
 | `polish` | UI 细节打磨 | 低 |
 
 > 仪表盘类任务（`metric-toggle`…`polish`）的详细差距说明见 [`../feature-gaps.md`](../feature-gaps.md)。
