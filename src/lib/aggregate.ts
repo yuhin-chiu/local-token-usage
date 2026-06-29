@@ -1,16 +1,23 @@
-import { readClaudeUsage } from "./sources/claude";
-import { readCodexUsage } from "./sources/codex";
+import { loadConfig } from "./config";
+import { SOURCE_REGISTRY, getSourceModules } from "./sources/registry";
 import type { UsageEvent, UsageSnapshot, SourceId, DailyBucket, ModelBreakdown } from "./types";
+
+const ALL_SOURCE_IDS = Object.keys(SOURCE_REGISTRY) as SourceId[];
 
 function ymd(iso: string): string {
   return iso.slice(0, 10);
 }
 
 function emptySourceMap(): Record<SourceId, { tokens: number; costUSD: number; sessions: number }> {
-  return {
-    "claude-code": { tokens: 0, costUSD: 0, sessions: 0 },
-    codex: { tokens: 0, costUSD: 0, sessions: 0 },
-  };
+  const m = {} as Record<SourceId, { tokens: number; costUSD: number; sessions: number }>;
+  for (const id of ALL_SOURCE_IDS) m[id] = { tokens: 0, costUSD: 0, sessions: 0 };
+  return m;
+}
+
+function emptyDailyBySource(): Record<SourceId, { tokens: number; costUSD: number }> {
+  const m = {} as Record<SourceId, { tokens: number; costUSD: number }>;
+  for (const id of ALL_SOURCE_IDS) m[id] = { tokens: 0, costUSD: 0 };
+  return m;
 }
 
 function emptyDaily(date: string): DailyBucket {
@@ -22,10 +29,7 @@ function emptyDaily(date: string): DailyBucket {
     cacheCreateTokens: 0,
     cacheReadTokens: 0,
     costUSD: 0,
-    bySource: {
-      "claude-code": { tokens: 0, costUSD: 0 },
-      codex: { tokens: 0, costUSD: 0 },
-    },
+    bySource: emptyDailyBySource(),
   };
 }
 
@@ -39,29 +43,21 @@ export async function buildSnapshot(daysBack = 30): Promise<UsageSnapshot> {
   const sinceDate = new Date(today.getTime() - daysBack * 86400 * 1000).toISOString().slice(0, 10);
 
   const warnings: string[] = [];
-  const [claudeRes, codexRes] = await Promise.allSettled([
-    readClaudeUsage(sinceDate),
-    readCodexUsage(sinceDate),
-  ]);
+  const { enabledSources } = loadConfig();
+  const modules = getSourceModules(enabledSources);
+  const results = await Promise.allSettled(modules.map((m) => m.read(sinceDate)));
 
   const events: UsageEvent[] = [];
-  if (claudeRes.status === "fulfilled") events.push(...claudeRes.value);
-  else warnings.push(`Claude source failed: ${String(claudeRes.reason)}`);
-
-  let codexRateLimit: UsageSnapshot["rateLimit"] = null;
-  if (codexRes.status === "fulfilled") {
-    events.push(...codexRes.value.events);
-    if (codexRes.value.latestRateLimit) {
-      codexRateLimit = {
-        source: "codex",
-        primaryUsedPercent: codexRes.value.latestRateLimit.primaryUsedPercent,
-        primaryResetsAt: codexRes.value.latestRateLimit.primaryResetsAt,
-        secondaryUsedPercent: codexRes.value.latestRateLimit.secondaryUsedPercent,
-        secondaryResetsAt: codexRes.value.latestRateLimit.secondaryResetsAt,
-        planType: codexRes.value.latestRateLimit.planType,
-      };
+  let rateLimit: UsageSnapshot["rateLimit"] = null;
+  results.forEach((res, i) => {
+    const id = modules[i].id;
+    if (res.status === "fulfilled") {
+      events.push(...res.value.events);
+      if (res.value.rateLimit && !rateLimit) rateLimit = res.value.rateLimit;
+    } else {
+      warnings.push(`${id} source failed: ${String(res.reason)}`);
     }
-  } else warnings.push(`Codex source failed: ${String(codexRes.reason)}`);
+  });
 
   const dailyMap = new Map<string, DailyBucket>();
   for (let i = 0; i <= daysBack; i++) {
@@ -75,14 +71,12 @@ export async function buildSnapshot(daysBack = 30): Promise<UsageSnapshot> {
   const todayBySource = emptySourceMap();
   const todaySessions = new Set<string>();
   const allSessions = new Set<string>();
-  const sessionsPerSource: Record<SourceId, Set<string>> = {
-    "claude-code": new Set(),
-    codex: new Set(),
-  };
-  const todaySessionsPerSource: Record<SourceId, Set<string>> = {
-    "claude-code": new Set(),
-    codex: new Set(),
-  };
+  const sessionsPerSource = {} as Record<SourceId, Set<string>>;
+  const todaySessionsPerSource = {} as Record<SourceId, Set<string>>;
+  for (const id of ALL_SOURCE_IDS) {
+    sessionsPerSource[id] = new Set();
+    todaySessionsPerSource[id] = new Set();
+  }
   const modelSessions = new Map<string, Set<string>>();
 
   let todayInput = 0, todayOutput = 0, todayCacheCreate = 0, todayCacheRead = 0, todayCost = 0;
@@ -166,18 +160,17 @@ export async function buildSnapshot(daysBack = 30): Promise<UsageSnapshot> {
       cacheReadTokens: todayCacheRead,
       costUSD: todayCost,
       sessions: todaySessions.size,
-      bySource: {
-        "claude-code": {
-          tokens: todayBySource["claude-code"].tokens,
-          costUSD: todayBySource["claude-code"].costUSD,
-          sessions: todaySessionsPerSource["claude-code"].size,
-        },
-        codex: {
-          tokens: todayBySource.codex.tokens,
-          costUSD: todayBySource.codex.costUSD,
-          sessions: todaySessionsPerSource.codex.size,
-        },
-      },
+      bySource: (() => {
+        const m = {} as Record<SourceId, { tokens: number; costUSD: number; sessions: number }>;
+        for (const id of ALL_SOURCE_IDS) {
+          m[id] = {
+            tokens: todayBySource[id].tokens,
+            costUSD: todayBySource[id].costUSD,
+            sessions: todaySessionsPerSource[id].size,
+          };
+        }
+        return m;
+      })(),
     },
     totals: {
       tokens: totalTokens,
@@ -188,7 +181,7 @@ export async function buildSnapshot(daysBack = 30): Promise<UsageSnapshot> {
     daily,
     models,
     todayModels,
-    rateLimit: codexRateLimit,
+    rateLimit,
     warnings,
   };
 }

@@ -8,11 +8,12 @@
 
 ## 续接锚点（每次收工必更新）
 
-- **上次进展：** ✅ 阶段一第 1+2 项完成。
+- **上次进展：** ✅ 阶段一第 1+2+3 项完成。
   - 第 1 项：`src/lib/config.ts`（`loadConfig`/`getEnabledSources`/`getPort`，逐字段回退默认）+ `ai-usage.config.example.json`。
   - 第 2 项：`src/lib/sources/registry.ts`（`SourceModule` 含 `id/capability/detect/read`，统一 `SourceReadResult` 抹平 claude/codex 差异；`SOURCE_REGISTRY` map + `getSourceModules()`）。codex 的 rateLimit→snapshot 映射已搬进 registry。`claude.ts`/`codex.ts` 各 export 了数据目录常量供 `detect()` 用。
-  - 回测：逻辑测试全过 + build typecheck 通过。**aggregate.ts 未动**，claude/codex 运行时行为不变（registry 暂无人调用）。
-- **下一步：** 阶段一第 3 项 —— `aggregate.ts` 改为 `loadConfig()` 取 enabledSources → `getSourceModules()` 遍历 read，移除硬编码两源 + 删掉 aggregate 里那份 rateLimit 映射。**注意**：`emptySourceMap`/`emptyDaily`/`sessionsPerSource` 等也写死了两源 key，需一并动态化。
+  - 第 3 项（2026-06-29）：`aggregate.ts` 改为 `loadConfig()` 取 `enabledSources` → `getSourceModules()` 遍历 `read`，移除硬编码两源调用 + 删掉本地 rateLimit 映射（已在 registry）。`emptySourceMap`/`emptyDailyBySource`/`sessionsPerSource`/`todaySessionsPerSource`/today `bySource` 全部改为遍历 `ALL_SOURCE_IDS = Object.keys(SOURCE_REGISTRY)`，无硬编码 key。
+  - 回测：grep 确认无残留源字面量；`tsc --noEmit` 通过；`next build` 编译+typecheck 全过。默认配置（无文件）= `["claude-code","codex"]`，claude/codex 运行时行为不变。
+- **下一步：** 阶段一第 4 项 —— `/api/usage` 透出 `enabledSources` + 各源 `capability`（供页面动态渲染）。需扩 `UsageSnapshot`（或 route 返回体）带上 sources 元信息；可从 `getSourceModules(enabledSources)` 取 `id/capability`。
 - **卡点：** 阶段四 Cursor 走 API 还是 count-only **待用户拍板**（不阻塞阶段一~三）。
 
 ## 决策日志
@@ -78,7 +79,7 @@ type SourceModule = {
 
 - [x] 新增 `ai-usage.config.json` schema + 读取工具（含默认回退） — `src/lib/config.ts` + `ai-usage.config.example.json`（2026-06-29）
 - [x] 新建 `src/lib/sources/registry.ts`，把 claude/codex 改造为注册表项（标注 `capability`） — `SourceModule`/`SOURCE_REGISTRY`/`getSourceModules` + 统一 `SourceReadResult`（2026-06-29）
-- [ ] `aggregate.ts` 改为遍历 enabledSources，移除硬编码
+- [x] `aggregate.ts` 改为遍历 enabledSources，移除硬编码 — `buildSnapshot` 走 `loadConfig`→`getSourceModules`→遍历 read，所有 source-keyed 结构动态化（2026-06-29）
 - [ ] `/api/usage` 透出 enabledSources + 各源 capability
 - [ ] 页面按返回的源列表 + capability 动态渲染（count-only 走精简卡片）
 - [ ] `ecosystem.config.js` 从 config 读端口（优先级高于默认 3002）

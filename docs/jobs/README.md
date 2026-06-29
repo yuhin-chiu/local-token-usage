@@ -10,7 +10,7 @@ ai-usage 多天任务总索引。**进入项目先读本文件。**
 
 | 任务 ID | 任务名 | 优先级 | 一句状态 |
 |---|---|---|---|
-| [`multi-source`](active/multi-source.md) | 多工具动态支持 | **P0 最高** | 规划完成，待开工阶段一（纯本地：配置文件+源注册表） |
+| [`multi-source`](active/multi-source.md) | 多工具动态支持 | **P0 最高** | 阶段一 3/6：config+registry+aggregate 动态化已完成，下一步 /api/usage 透出 sources 元信息 |
 
 > WIP 限制 ≤2。
 
