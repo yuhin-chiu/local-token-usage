@@ -181,6 +181,7 @@ export async function buildSnapshot(daysBack = 30): Promise<UsageSnapshot> {
     daily,
     models,
     todayModels,
+    sources: modules.map((m) => ({ id: m.id, capability: m.capability })),
     rateLimit,
     warnings,
   };

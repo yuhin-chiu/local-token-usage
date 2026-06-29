@@ -1,14 +1,7 @@
 import { promises as fs } from "node:fs";
 import { CLAUDE_DIR, readClaudeUsage } from "./claude";
 import { CODEX_DIR, readCodexUsage } from "./codex";
-import type { SourceId, UsageEvent, UsageSnapshot } from "../types";
-
-/**
- * Source capability tiers — how much usage data we can get from local files.
- * - `token`: per-request input/output/cache tokens are available locally → full cost.
- * - `count-only`: only request/session counts locally (e.g. Cursor), no token/cost.
- */
-export type SourceCapability = "token" | "count-only";
+import type { SourceCapability, SourceId, UsageEvent, UsageSnapshot } from "../types";
 
 /** Uniform result every source reader returns, smoothing over per-source shapes. */
 export type SourceReadResult = {

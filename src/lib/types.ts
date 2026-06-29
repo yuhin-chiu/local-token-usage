@@ -1,5 +1,18 @@
 export type SourceId = "claude-code" | "codex";
 
+/**
+ * How much usage data a source exposes locally.
+ * - `token`: per-request input/output/cache tokens are available → full cost.
+ * - `count-only`: only request/session counts locally (e.g. Cursor), no token/cost.
+ */
+export type SourceCapability = "token" | "count-only";
+
+/** Per-source metadata surfaced to the client so the UI can render dynamically. */
+export type SourceInfo = {
+  id: SourceId;
+  capability: SourceCapability;
+};
+
 export type UsageEvent = {
   source: SourceId;
   timestamp: string;
@@ -61,6 +74,8 @@ export type UsageSnapshot = {
   daily: DailyBucket[];
   models: ModelBreakdown[];
   todayModels: ModelBreakdown[];
+  /** Enabled + registered sources, in config order, with their capability. */
+  sources: SourceInfo[];
   rateLimit?: {
     source: SourceId;
     primaryUsedPercent?: number;
