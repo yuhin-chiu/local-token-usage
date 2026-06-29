@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "enabledSources": ["claude-code", "codex"],
+  "port": 3002
+}

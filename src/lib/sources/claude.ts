@@ -6,7 +6,7 @@ import { createReadStream } from "node:fs";
 import { costFor } from "../pricing";
 import type { UsageEvent } from "../types";
 
-const CLAUDE_DIR = path.join(os.homedir(), ".claude", "projects");
+export const CLAUDE_DIR = path.join(os.homedir(), ".claude", "projects");
 
 async function walkJsonl(root: string): Promise<string[]> {
   const out: string[] = [];
