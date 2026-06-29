@@ -25,7 +25,6 @@ ai-usage 多天任务总索引。**进入项目先读本文件。**
 | `model-table` | ModelTable 双表增强 | 中 |
 | `rate-limit` | Rate Limit 展示增强 | 中 |
 | `plugin-update` | 插件版本锁定更新 | 中 |
-| `legacy-root-dashboard` | 清理不可达的旧版 dashboard | 中 |
 | `polish` | UI 细节打磨 | 低 |
 
 > 仪表盘类任务（`metric-toggle`…`polish`）的详细差距说明见 [`../feature-gaps.md`](../feature-gaps.md)。

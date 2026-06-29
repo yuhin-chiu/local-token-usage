@@ -15,7 +15,7 @@
   - 回测：grep 确认无残留源字面量；`tsc --noEmit` 通过；`next build` 编译+typecheck 全过。默认配置（无文件）= `["claude-code","codex"]`，claude/codex 运行时行为不变。
 - **上次进展（续）：** ✅ 阶段一 6 项全部完成（item 3~6 见各 checkbox）。已清理 `src/app/dashboard/_components/` 下 7 个死代码组件（chore commit）。
 - **下一步：** 阶段一收尾，可进**阶段二**（init 勾选 + 自动探测）。开工前需读 `ai-usage-plugin` 插件仓库的 `commands/init.md`。
-- **待清理（已转 backlog）：** 发现 `src/app/page.tsx` + `src/app/_components/`（7 文件）是**整套不可达的旧版 dashboard**（`/`→`/dashboard` 重定向，page.tsx 永不渲染）。比单纯死组件大，已记入 backlog `legacy-root-dashboard`，待用户拍板是否删。
+- **已清理：** 删除了不可达的旧版 dashboard `src/app/page.tsx` + `src/app/_components/`（7 文件）。删后 `/` 仍由 next.config 重定向到 `/dashboard`（实测 307→200）。清理需 `rm -rf .next` 重新 build（Next 生成的类型校验器缓存了已删的 `/` 路由）。
 - **卡点：** 阶段四 Cursor 走 API 还是 count-only **待用户拍板**（不阻塞阶段一~三）。
 
 ## 决策日志
