@@ -2,9 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { fmtTokens, fmtCost, fmtRelative } from "@/lib/format";
-import type { DailyBucket, ModelBreakdown, UsageSnapshot } from "@/lib/types";
+import { SOURCES } from "@/lib/types";
+import type { DailyBucket, ModelBreakdown, SourceId, SourceMeta, UsageSnapshot } from "@/lib/types";
 
 type Range = "today" | "yesterday" | 7 | 30 | 90;
+
+/** A token-capable source resolved for chart rendering: just id + accent. */
+type TokenSource = { id: SourceId; accent: string };
 
 // ─── utils ───────────────────────────────────────────────────────────────────
 
@@ -32,6 +36,25 @@ function shortDay(iso: string) {
 
 function pct(v: number, max: number) {
   return max > 0 ? Math.min(100, (v / max) * 100) : 0;
+}
+
+const FALLBACK_META: Omit<SourceMeta, "id"> = { label: "", accent: "#8888a8" };
+
+/** Resolve a source id to its display metadata, falling back gracefully for
+ *  unknown ids (e.g. a freshly added source not yet in SOURCES). */
+function sourceMeta(id: SourceId): SourceMeta {
+  return SOURCES.find(s => s.id === id) ?? { id, label: id, accent: FALLBACK_META.accent };
+}
+
+/** Convert a #rrggbb (or #rgb) hex color to an rgba() string with the given alpha. */
+function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace("#", "");
+  const full = h.length === 3 ? h.split("").map(c => c + c).join("") : h;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  if ([r, g, b].some(Number.isNaN)) return `rgba(136,136,168,${alpha})`;
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
@@ -63,21 +86,34 @@ function StatCard({ label, value, sub, accent }: {
 
 // ─── DailyRow ─────────────────────────────────────────────────────────────────
 
-function DailyRow({ bucket, maxTokens, isToday }: {
+function DailyRow({ bucket, maxTokens, isToday, tokenSources, cols }: {
   bucket: DailyBucket; maxTokens: number; isToday: boolean;
+  tokenSources: TokenSource[]; cols: string;
 }) {
-  const claude = bucket.bySource["claude-code"]?.tokens ?? 0;
-  const codex  = bucket.bySource.codex?.tokens ?? 0;
-  const total  = bucket.totalTokens;
-  const empty  = total === 0;
-  const claudeW = pct(claude, maxTokens);
-  const codexW  = pct(codex, maxTokens);
+  const total = bucket.totalTokens;
+  const empty = total === 0;
+
+  // Stacked distribution segments, one per token source, in config order.
+  let offset = 0;
+  const segments = tokenSources.map(s => {
+    const v = bucket.bySource[s.id]?.tokens ?? 0;
+    const w = pct(v, maxTokens);
+    const seg = (
+      <div key={s.id} style={{
+        position: "absolute", top: 0, bottom: 0,
+        left: `${offset}%`, width: `${w}%`,
+        background: s.accent, opacity: 0.8,
+      }} />
+    );
+    offset += w;
+    return seg;
+  });
 
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "132px 1fr 88px 72px 80px 76px",
+        gridTemplateColumns: cols,
         gap: "0 12px",
         alignItems: "center",
         padding: "11px 16px",
@@ -105,22 +141,8 @@ function DailyRow({ bucket, maxTokens, isToday }: {
         )}
       </div>
 
-      <div style={{ position: "relative", height: 5, borderRadius: 3, background: "rgba(255,255,255,0.04)" }}>
-        {!empty && (
-          <>
-            <div style={{
-              position: "absolute", top: 0, left: 0, bottom: 0,
-              width: `${claudeW}%`, background: "#d97757", opacity: 0.8,
-              borderRadius: "3px 0 0 3px",
-            }} />
-            <div style={{
-              position: "absolute", top: 0, bottom: 0,
-              left: `${claudeW}%`, width: `${codexW}%`,
-              background: "#a78bfa", opacity: 0.8,
-              borderRadius: codexW > 0 ? "0 3px 3px 0" : 0,
-            }} />
-          </>
-        )}
+      <div style={{ position: "relative", height: 5, borderRadius: 3, background: "rgba(255,255,255,0.04)", overflow: "hidden" }}>
+        {!empty && segments}
       </div>
 
       <div style={{ textAlign: "right", fontFamily: "'DM Mono', var(--font-dm-mono), monospace", fontSize: 12, fontWeight: 500, color: empty ? "#2e2e42" : "#d0d0e0" }}>
@@ -129,12 +151,15 @@ function DailyRow({ bucket, maxTokens, isToday }: {
       <div style={{ textAlign: "right", fontFamily: "'DM Mono', var(--font-dm-mono), monospace", fontSize: 12, color: empty ? "#2e2e42" : "#6868a0" }}>
         {empty ? "—" : fmtCost(bucket.costUSD)}
       </div>
-      <div style={{ textAlign: "right", fontFamily: "'DM Mono', var(--font-dm-mono), monospace", fontSize: 11, color: claude > 0 ? "#c07040" : "#2e2e42" }}>
-        {claude > 0 ? fmtTokens(claude) : "—"}
-      </div>
-      <div style={{ textAlign: "right", fontFamily: "'DM Mono', var(--font-dm-mono), monospace", fontSize: 11, color: codex > 0 ? "#8870cc" : "#2e2e42" }}>
-        {codex > 0 ? fmtTokens(codex) : "—"}
-      </div>
+
+      {tokenSources.map(s => {
+        const v = bucket.bySource[s.id]?.tokens ?? 0;
+        return (
+          <div key={s.id} style={{ textAlign: "right", fontFamily: "'DM Mono', var(--font-dm-mono), monospace", fontSize: 11, color: v > 0 ? s.accent : "#2e2e42" }}>
+            {v > 0 ? fmtTokens(v) : "—"}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -149,6 +174,7 @@ function ModelRow({ model, maxTokens, rank }: {
     .replace(/^claude-/, "")
     .replace(/-\d{8}$/, "")
     .replace(/-/g, " ");
+  const accent = sourceMeta(model.source).accent;
 
   return (
     <div
@@ -160,7 +186,7 @@ function ModelRow({ model, maxTokens, rank }: {
       <div>
         <div style={{ fontSize: 12, color: "#c0c0d8", fontWeight: 500, textTransform: "capitalize" }}>{name}</div>
         <div style={{ marginTop: 4, height: 2, borderRadius: 1, background: "rgba(255,255,255,0.04)", overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${w}%`, background: model.source === "claude-code" ? "#d97757" : "#a78bfa", opacity: 0.6, borderRadius: 1 }} />
+          <div style={{ height: "100%", width: `${w}%`, background: accent, opacity: 0.6, borderRadius: 1 }} />
         </div>
       </div>
       <div style={{ textAlign: "right", fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#b0b0c8" }}>{fmtTokens(model.tokens)}</div>
@@ -172,7 +198,7 @@ function ModelRow({ model, maxTokens, rank }: {
 
 // ─── TrendChart ───────────────────────────────────────────────────────────────
 
-function TrendChart({ data }: { data: DailyBucket[] }) {
+function TrendChart({ data, tokenSources }: { data: DailyBucket[]; tokenSources: TokenSource[] }) {
   const n = data.length;
   if (n === 0) return null;
 
@@ -183,13 +209,7 @@ function TrendChart({ data }: { data: DailyBucket[] }) {
   return (
     <div style={{ display: "flex", alignItems: "flex-end", gap: n > 30 ? 1 : n > 14 ? 2 : 4, padding: "8px 4px 0" }}>
       {data.map((d, i) => {
-        const claude = d.bySource["claude-code"]?.tokens ?? 0;
-        const codex  = d.bySource.codex?.tokens ?? 0;
-        const total  = d.totalTokens;
-
-        const claudeH = (claude / maxVal) * BAR_H;
-        const codexH  = (codex  / maxVal) * BAR_H;
-
+        const total = d.totalTokens;
         const showDate = n <= 14 || i % 7 === 0;
 
         return (
@@ -207,18 +227,15 @@ function TrendChart({ data }: { data: DailyBucket[] }) {
               )}
             </div>
 
-            {/* Bar */}
+            {/* Bar — segments stacked top-to-bottom in config order */}
             <div style={{ width: "100%", height: BAR_H, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
               {total > 0 ? (
                 <div style={{ display: "flex", flexDirection: "column", borderRadius: "3px 3px 0 0", overflow: "hidden" }}>
-                  {/* Claude on top */}
-                  {claude > 0 && (
-                    <div style={{ height: claudeH, background: "#d97757", opacity: 0.85 }} />
-                  )}
-                  {/* Codex at bottom */}
-                  {codex > 0 && (
-                    <div style={{ height: codexH, background: "#a78bfa", opacity: 0.85 }} />
-                  )}
+                  {tokenSources.map(s => {
+                    const v = d.bySource[s.id]?.tokens ?? 0;
+                    if (v <= 0) return null;
+                    return <div key={s.id} style={{ height: (v / maxVal) * BAR_H, background: s.accent, opacity: 0.85 }} />;
+                  })}
                 </div>
               ) : (
                 <div style={{ height: 2, background: "rgba(255,255,255,0.05)", borderRadius: 1 }} />
@@ -244,6 +261,21 @@ function TrendChart({ data }: { data: DailyBucket[] }) {
         );
       })}
     </div>
+  );
+}
+
+// ─── Legend ───────────────────────────────────────────────────────────────────
+
+function Legend({ tokenSources, dot }: { tokenSources: TokenSource[]; dot: number }) {
+  return (
+    <>
+      {tokenSources.map(s => (
+        <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ display: "inline-block", width: 8, height: dot, borderRadius: 2, background: s.accent, opacity: 0.85 }} />
+          {sourceMeta(s.id).label}
+        </div>
+      ))}
+    </>
   );
 }
 
@@ -296,6 +328,13 @@ export default function DashboardPage() {
     return () => clearInterval(id);
   }, [fetchData]);
 
+  // Enabled sources (dynamic, from API) and the token-capable subset for charts.
+  const sources = useMemo(() => data?.sources ?? [], [data]);
+  const tokenSources = useMemo<TokenSource[]>(
+    () => sources.filter(s => s.capability === "token").map(s => ({ id: s.id, accent: sourceMeta(s.id).accent })),
+    [sources],
+  );
+
   // All available daily buckets from API
   const allDays = useMemo(() => data?.daily ?? [], [data]);
 
@@ -332,13 +371,16 @@ export default function DashboardPage() {
   }, [data, range]);
   const maxModel = useMemo(() => Math.max(1, ...topModels.map(m => m.tokens)), [topModels]);
 
-  // Source display for stat section
-  const claudeSrc = range === "today"
-    ? data?.today.bySource["claude-code"]
-    : targetBucket?.bySource["claude-code"] ?? data?.today.bySource["claude-code"];
-  const codexSrc = range === "today"
-    ? data?.today.bySource.codex
-    : targetBucket?.bySource.codex ?? data?.today.bySource.codex;
+  // Per-source token/cost/sessions for the current view (today → today.bySource,
+  // single-day → that bucket, range → fall back to today).
+  const srcOf = useCallback((id: SourceId) => {
+    if (range === "today") return data?.today.bySource[id];
+    return targetBucket?.bySource[id] ?? data?.today.bySource[id];
+  }, [range, data, targetBucket]);
+
+  const srcSessions = useCallback((id: SourceId) => {
+    return (range === "today" ? data?.today.bySource[id]?.sessions : undefined) ?? 0;
+  }, [range, data]);
 
   // Stat card values
   const statTokens = range === "today" ? (data?.today.totalTokens ?? 0) : periodTokens;
@@ -352,6 +394,13 @@ export default function DashboardPage() {
 
   const rangeLabel = range === "today" ? "Today" : range === "yesterday" ? "Yesterday" : `${range}d`;
   const todayDate  = data?.today.date ?? TODAY_STR;
+
+  const subtitle = sources.length
+    ? `${sources.map(s => sourceMeta(s.id).label).join(" · ")} · local data only`
+    : "local data only";
+
+  // Dynamic grid template for the daily table: base columns + one per token source.
+  const dailyCols = `132px 1fr 88px 72px${" 76px".repeat(tokenSources.length)}`;
 
   // Shared styles
   const section: React.CSSProperties = {
@@ -402,7 +451,7 @@ export default function DashboardPage() {
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 24, gap: 16, flexWrap: "wrap" }}>
           <div>
             <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em", color: "var(--theme-text)" }}>AI Usage</h1>
-            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#44445a" }}>Claude Code · Codex CLI · local data only</p>
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#44445a" }}>{subtitle}</p>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -448,40 +497,47 @@ export default function DashboardPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 12 }}>
           <StatCard label={`${rangeLabel} · Tokens`} accent="#d97757" value={fmtTokens(statTokens)} sub={statSub1} />
           <StatCard label={`${rangeLabel} · Cost`}   accent="#34d399" value={fmtCost(statCost)}      sub={statSub2} />
-          <StatCard label="Claude" accent="#d97757" value={fmtTokens(claudeSrc?.tokens ?? 0)} sub={fmtCost(claudeSrc?.costUSD ?? 0)} />
-          <StatCard label="Codex"  accent="#a78bfa" value={fmtTokens(codexSrc?.tokens ?? 0)}  sub={fmtCost(codexSrc?.costUSD ?? 0)} />
+          {sources.map(s => {
+            const meta = sourceMeta(s.id);
+            const st = srcOf(s.id);
+            const isToken = s.capability === "token";
+            return (
+              <StatCard
+                key={s.id}
+                label={meta.label}
+                accent={meta.accent}
+                value={fmtTokens(st?.tokens ?? 0)}
+                sub={isToken ? fmtCost(st?.costUSD ?? 0) : `${srcSessions(s.id)} sessions · no cost`}
+              />
+            );
+          })}
         </div>
 
         {/* ── SOURCE SPLIT ───────────────────────────────────── */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
-          <div style={{ padding: "14px 18px", borderRadius: 12, background: "rgba(217,119,87,0.04)", border: "1px solid rgba(217,119,87,0.14)", display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#d97757", flexShrink: 0 }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#a05030", marginBottom: 3, letterSpacing: "0.04em" }}>Claude Code</div>
-              <div style={{ fontFamily: "'DM Mono', var(--font-dm-mono), monospace", fontSize: 20, fontWeight: 500, color: "#d97757" }}>
-                {fmtTokens(claudeSrc?.tokens ?? 0)}
-                <span style={{ fontSize: 12, color: "#505068", marginLeft: 8 }}>{fmtCost(claudeSrc?.costUSD ?? 0)}</span>
-              </div>
-            </div>
-            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#3e3e58" }}>
-              {(range === "today" ? data?.today.bySource["claude-code"]?.sessions : undefined) ?? 0} sessions
-            </div>
+        {sources.length > 0 && (
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${sources.length}, 1fr)`, gap: 12, marginBottom: 12 }}>
+            {sources.map(s => {
+              const meta = sourceMeta(s.id);
+              const st = srcOf(s.id);
+              const isToken = s.capability === "token";
+              return (
+                <div key={s.id} style={{ padding: "14px 18px", borderRadius: 12, background: hexToRgba(meta.accent, 0.04), border: `1px solid ${hexToRgba(meta.accent, 0.14)}`, display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: meta.accent, flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: meta.accent, marginBottom: 3, letterSpacing: "0.04em", opacity: 0.85 }}>{meta.label}</div>
+                    <div style={{ fontFamily: "'DM Mono', var(--font-dm-mono), monospace", fontSize: 20, fontWeight: 500, color: meta.accent }}>
+                      {fmtTokens(st?.tokens ?? 0)}
+                      {isToken && <span style={{ fontSize: 12, color: "#505068", marginLeft: 8 }}>{fmtCost(st?.costUSD ?? 0)}</span>}
+                    </div>
+                  </div>
+                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#3e3e58" }}>
+                    {srcSessions(s.id)} sessions
+                  </div>
+                </div>
+              );
+            })}
           </div>
-
-          <div style={{ padding: "14px 18px", borderRadius: 12, background: "rgba(167,139,250,0.04)", border: "1px solid rgba(167,139,250,0.14)", display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#a78bfa", flexShrink: 0 }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#7060a8", marginBottom: 3, letterSpacing: "0.04em" }}>Codex CLI</div>
-              <div style={{ fontFamily: "'DM Mono', var(--font-dm-mono), monospace", fontSize: 20, fontWeight: 500, color: "#a78bfa" }}>
-                {fmtTokens(codexSrc?.tokens ?? 0)}
-                <span style={{ fontSize: 12, color: "#505068", marginLeft: 8 }}>{fmtCost(codexSrc?.costUSD ?? 0)}</span>
-              </div>
-            </div>
-            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#3e3e58" }}>
-              {(range === "today" ? data?.today.bySource.codex?.sessions : undefined) ?? 0} sessions
-            </div>
-          </div>
-        </div>
+        )}
 
         {/* ── RATE LIMITS ────────────────────────────────────── */}
         {data?.rateLimit && (data.rateLimit.primaryUsedPercent !== undefined || data.rateLimit.secondaryUsedPercent !== undefined) && (
@@ -533,27 +589,23 @@ export default function DashboardPage() {
 
           {/* Legend */}
           <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "8px 18px 0", fontSize: 11, color: "#40405a" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-              <span style={{ display: "inline-block", width: 8, height: 4, borderRadius: 2, background: "#d97757", opacity: 0.8 }} />Claude
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-              <span style={{ display: "inline-block", width: 8, height: 4, borderRadius: 2, background: "#a78bfa", opacity: 0.8 }} />Codex
-            </div>
+            <Legend tokenSources={tokenSources} dot={4} />
           </div>
 
           {/* Column headers */}
-          <div style={{ display: "grid", gridTemplateColumns: "132px 1fr 88px 72px 80px 76px", gap: "0 12px", padding: "6px 16px 6px", ...colHead }}>
+          <div style={{ display: "grid", gridTemplateColumns: dailyCols, gap: "0 12px", padding: "6px 16px 6px", ...colHead }}>
             <div>Date</div>
             <div>Distribution</div>
             <div style={{ textAlign: "right" }}>Tokens</div>
             <div style={{ textAlign: "right" }}>Cost</div>
-            <div style={{ textAlign: "right", color: "#603020" }}>Claude</div>
-            <div style={{ textAlign: "right", color: "#503880" }}>Codex</div>
+            {tokenSources.map(s => (
+              <div key={s.id} style={{ textAlign: "right", color: s.accent, opacity: 0.7 }}>{sourceMeta(s.id).label}</div>
+            ))}
           </div>
 
           <div style={{ padding: "2px 4px 8px" }}>
             {listRows.length > 0
-              ? listRows.map(b => <DailyRow key={b.date} bucket={b} maxTokens={maxTokens} isToday={b.date === todayDate} />)
+              ? listRows.map(b => <DailyRow key={b.date} bucket={b} maxTokens={maxTokens} isToday={b.date === todayDate} tokenSources={tokenSources} cols={dailyCols} />)
               : <div style={{ padding: "32px 16px", textAlign: "center", fontSize: 12, color: "#32324a" }}>{loading ? "Loading…" : "No data"}</div>
             }
           </div>
@@ -593,19 +645,14 @@ export default function DashboardPage() {
                 {(range === "today" || range === "yesterday") ? "Last 14 days context" : `Last ${range} days · daily tokens`}
               </span>
               <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 11, fontWeight: 400, color: "#40405a" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "#d97757", opacity: 0.85 }} />Claude
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "#a78bfa", opacity: 0.85 }} />Codex
-                </div>
+                <Legend tokenSources={tokenSources} dot={8} />
               </div>
             </div>
           </div>
 
           <div style={{ padding: "4px 16px 4px" }}>
             {trendData.length > 0
-              ? <TrendChart data={trendData} />
+              ? <TrendChart data={trendData} tokenSources={tokenSources} />
               : <div style={{ padding: "32px 0", textAlign: "center", fontSize: 12, color: "#32324a" }}>{loading ? "Loading…" : "No data"}</div>
             }
           </div>

@@ -13,7 +13,8 @@
   - 第 2 项：`src/lib/sources/registry.ts`（`SourceModule` 含 `id/capability/detect/read`，统一 `SourceReadResult` 抹平 claude/codex 差异；`SOURCE_REGISTRY` map + `getSourceModules()`）。codex 的 rateLimit→snapshot 映射已搬进 registry。`claude.ts`/`codex.ts` 各 export 了数据目录常量供 `detect()` 用。
   - 第 3 项（2026-06-29）：`aggregate.ts` 改为 `loadConfig()` 取 `enabledSources` → `getSourceModules()` 遍历 `read`，移除硬编码两源调用 + 删掉本地 rateLimit 映射（已在 registry）。`emptySourceMap`/`emptyDailyBySource`/`sessionsPerSource`/`todaySessionsPerSource`/today `bySource` 全部改为遍历 `ALL_SOURCE_IDS = Object.keys(SOURCE_REGISTRY)`，无硬编码 key。
   - 回测：grep 确认无残留源字面量；`tsc --noEmit` 通过；`next build` 编译+typecheck 全过。默认配置（无文件）= `["claude-code","codex"]`，claude/codex 运行时行为不变。
-- **下一步：** 阶段一第 5 项 —— 页面按 `/api/usage` 返回的 `sources` 列表 + `capability` 动态渲染（`count-only` 走精简卡片）。现状页面仍用静态 `SOURCES`（types.ts，含 label/accent）写死渲染两源；需改为读 snapshot.sources，按 id 关联 SOURCES 取 label/accent，按 capability 决定卡片形态。涉及 `page.tsx` 及 `_components/`（SourceChannel/SignalCard 等）。
+- **下一步：** 阶段一第 6 项（最后一项）—— `ecosystem.config.js` 从 config 读端口（优先级高于默认 3002）。现状 `ecosystem.config.js` 写死 `args: 'start -p 3002'`；`src/lib/config.ts` 已有 `getPort()`。注意 ecosystem 是 CommonJS、在 PM2 启动时（非 Next 运行时）求值，需用 require 读 config.ts 的逻辑或直接读 JSON 文件取 port。
+- **待清理（非阻塞）：** `src/app/dashboard/_components/` 下 7 个文件经确认是**死代码**（page.tsx 从未 import），与本次动态化无关。是否删除待用户拍板，未动。
 - **卡点：** 阶段四 Cursor 走 API 还是 count-only **待用户拍板**（不阻塞阶段一~三）。
 
 ## 决策日志
@@ -81,7 +82,7 @@ type SourceModule = {
 - [x] 新建 `src/lib/sources/registry.ts`，把 claude/codex 改造为注册表项（标注 `capability`） — `SourceModule`/`SOURCE_REGISTRY`/`getSourceModules` + 统一 `SourceReadResult`（2026-06-29）
 - [x] `aggregate.ts` 改为遍历 enabledSources，移除硬编码 — `buildSnapshot` 走 `loadConfig`→`getSourceModules`→遍历 read，所有 source-keyed 结构动态化（2026-06-29）
 - [x] `/api/usage` 透出 enabledSources + 各源 capability — `UsageSnapshot.sources: SourceInfo[]`（`{id,capability}`，config 顺序）；`SourceCapability` 移到 `types.ts`，registry 改引入（2026-06-29）
-- [ ] 页面按返回的源列表 + capability 动态渲染（count-only 走精简卡片）
+- [x] 页面按返回的源列表 + capability 动态渲染（count-only 走精简卡片） — `page.tsx` 全部源相关区域遍历 `data.sources`，label/accent 从 `SOURCES` 查（带兜底）；token 图表只遍历 `capability==="token"` 源；count-only 走无成本精简显示。先并行建 `dashboard2/` 验证后替换进 `dashboard/`（2026-06-29）
 - [ ] `ecosystem.config.js` 从 config 读端口（优先级高于默认 3002）
 
 ### 阶段二 — init 勾选 + 自动探测（🔲 未开始）
