@@ -8,17 +8,19 @@
 
 ## 续接锚点（每次收工必更新）
 
-- **上次进展：** ✅ 阶段一第 1+2+3 项完成。
-  - 第 1 项：`src/lib/config.ts`（`loadConfig`/`getEnabledSources`/`getPort`，逐字段回退默认）+ `local-usage.config.example.json`。
-  - 第 2 项：`src/lib/sources/registry.ts`（`SourceModule` 含 `id/capability/detect/read`，统一 `SourceReadResult` 抹平 claude/codex 差异；`SOURCE_REGISTRY` map + `getSourceModules()`）。codex 的 rateLimit→snapshot 映射已搬进 registry。`claude.ts`/`codex.ts` 各 export 了数据目录常量供 `detect()` 用。
-  - 第 3 项（2026-06-29）：`aggregate.ts` 改为 `loadConfig()` 取 `enabledSources` → `getSourceModules()` 遍历 `read`，移除硬编码两源调用 + 删掉本地 rateLimit 映射（已在 registry）。`emptySourceMap`/`emptyDailyBySource`/`sessionsPerSource`/`todaySessionsPerSource`/today `bySource` 全部改为遍历 `ALL_SOURCE_IDS = Object.keys(SOURCE_REGISTRY)`，无硬编码 key。
-  - 回测：grep 确认无残留源字面量；`tsc --noEmit` 通过；`next build` 编译+typecheck 全过。默认配置（无文件）= `["claude-code","codex"]`，claude/codex 运行时行为不变。
-- **上次进展（续）：** ✅ 阶段一 6 项全部完成（item 3~6 见各 checkbox）。已清理 `src/app/dashboard/_components/` 下 7 个死代码组件（chore commit）。
-- **上次进展（续 2）：** ✅ 阶段二代码完成（插件仓 `init.md` 新增 Step 5 探测+选源+写配置+问端口；`plugin.json` 1.0.6→1.1.0；CHANGELOG）。**待用户实跑 `/local-usage:init` 端到端验证**。
-- **下一步：** 阶段三 —— `/config` 动态改配置（网页设置页 or 插件命令，待定）。另见 backlog 新增 `cmd-port-aware`（start/stop/status/open 仍写死 3002，自定义端口下会指错）。
-- **遗留小坑：** 插件 `start/stop/status/open` 命令里端口仍写死 3002；只有 init(PM2) 和"无 PM2 用 $PORT 启动"尊重自定义端口。自定义端口时这些命令会指向 3002。已记 backlog。
-- **已清理：** 删除了不可达的旧版 dashboard `src/app/page.tsx` + `src/app/_components/`（7 文件）。删后 `/` 仍由 next.config 重定向到 `/dashboard`（实测 307→200）。清理需 `rm -rf .next` 重新 build（Next 生成的类型校验器缓存了已删的 `/` 路由）。
-- **卡点：** 阶段四 Cursor 走 API 还是 count-only **待用户拍板**（不阻塞阶段一~三）。
+> 进度：✅ 阶段一（6/6）+ ✅ 阶段二（代码）完成并已 push 两仓。明细见下方里程碑 checkbox + 决策日志。
+
+- **上次进展（2026-06-29 收工）：**
+  - 阶段一 6 项全部完成（config/registry/aggregate/API sources/页面动态渲染/ecosystem 端口）；清理了 `dashboard/_components/` 死代码 + 不可达的旧版根 dashboard（`src/app/page.tsx`+`src/app/_components/`，删后 `/`→`/dashboard` 307 正常）。
+  - 进程名/配置文件统一 `ai-usage` → **`local-usage`**（含 `local-usage.config.json`）。PM2 现跑 `local-usage`。
+  - 阶段二代码完成（**插件仓** `init.md` 新增 Step 5：探测 `~/.claude/projects`+`~/.codex/sessions` → 多选源 → 问端口 → 写 `local-usage.config.json`；无 PM2 模式用 `next start -p $PORT`）；`plugin.json` 1.0.6→**1.1.0** + CHANGELOG。
+  - 两仓均已 push：看板 `local-token-usage`(b36cda4)、插件 `local-token-usage-plugin`(87723f0, main 已修好 tracking)。用户可 `/plugin update`。
+
+- **明天首要任务 ① 修 `cmd-port-aware`（遗留 3002 写死）：** 插件命令 `start`/`stop`/`status`/`open` 仍把端口写死 `3002`，自定义端口时会指错。改为先读 `$INSTALL_DIR/local-usage.config.json` 的 `port`（回退 3002）再用。涉及插件仓 4 个命令文件 + bump 版本。详见 backlog `cmd-port-aware`。
+- **明天任务 ② 阶段二端到端验证：** `/plugin update` 后跑一次 `/local-usage:init`，确认 Step 5 探测/选源/问端口/写配置全流程 OK（指令文档没法自测，只在本机验过 shell 片段）。
+
+- **暂缓：** 阶段三 `/config` 动态改配置（用户说不着急）。
+- **卡点：** 阶段四 Cursor 走 API 还是 count-only **待用户拍板**（不阻塞）。
 
 ## 决策日志
 
