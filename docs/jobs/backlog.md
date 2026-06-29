@@ -37,6 +37,12 @@ Header 加 Tokens / Cost 分段选择器，切换影响 DailyChart 与 StatCard 
 无数据时显示占位卡片；加 planType badge + Gauge/Timer 图标；统一三色阈值语义。
 详见 feature-gaps.md「六」。
 
+## [legacy-root-dashboard] 清理不可达的旧版 dashboard（中）
+
+`src/app/page.tsx`（`/` 路由）+ `src/app/_components/`（7 文件：Header/StatCard/DailyChart/TrendChart/ModelTable/RateLimit/SourceSplit）是一整套**旧版 dashboard**。`next.config.ts` 把 `/` 重定向到 `/dashboard`（permanent:false），故 `page.tsx` 永不渲染，但它 import 了 `src/app/_components/`，所以这批组件在 import 图里"被使用"（实为死代码链）。CLAUDE.md 只把 `/dashboard` 当正主、完全没提这套。
+
+**待决策：** 直接删（`git rm` page.tsx + 整个 `src/app/_components/`，删后 `/` 仍由 next.config 重定向，无影响），还是保留作参考。发现于 2026-06-29 多源 stage 1 收尾时。
+
 ## [polish] UI 细节打磨（低）
 
 API warnings 提示、Refresh 旋转动画、Header live-dot、自动刷新 30s→15s、Footer 路径高亮、grid-noise 背景。
