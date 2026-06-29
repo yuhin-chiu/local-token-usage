@@ -663,6 +663,9 @@ export default function DashboardPage() {
           <p style={{ fontSize: 11, color: "#222232", fontFamily: "'DM Mono', var(--font-dm-mono), monospace" }}>
             reads ~/.claude/projects & ~/.codex/sessions · no data leaves your machine
           </p>
+          <p style={{ margin: "4px 0 0", fontSize: 10, color: "#1e1e2e", fontFamily: "'DM Mono', var(--font-dm-mono), monospace" }}>
+            v1.1.0
+          </p>
         </div>
       </div>
     </div>
