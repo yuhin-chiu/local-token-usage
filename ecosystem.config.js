@@ -7,7 +7,9 @@ const path = require('node:path');
 // validation here mirrors sanitizePort() there.
 function resolvePort() {
   try {
-    const raw = JSON.parse(fs.readFileSync(path.join(__dirname, 'local-usage.config.json'), 'utf8'));
+    const text = fs.readFileSync(path.join(__dirname, 'local-usage.config.json'), 'utf8');
+    // Strip a leading UTF-8 BOM (Windows / PowerShell Out-File adds one) before parsing.
+    const raw = JSON.parse(text.charCodeAt(0) === 0xfeff ? text.slice(1) : text);
     const p = raw && raw.port;
     if (typeof p === 'number' && Number.isInteger(p) && p > 0 && p < 65536) return p;
   } catch {

@@ -57,7 +57,10 @@ export function loadConfig(): AppConfig {
 
   let parsed: unknown;
   try {
-    parsed = JSON.parse(readFileSync(file, "utf8"));
+    // Strip a leading UTF-8 BOM — Windows editors / PowerShell's `Out-File -Encoding
+    // utf8` prepend one, and JSON.parse rejects it.
+    const text = readFileSync(file, "utf8");
+    parsed = JSON.parse(text.charCodeAt(0) === 0xfeff ? text.slice(1) : text);
   } catch {
     // Missing file or invalid JSON → full defaults.
     return { ...DEFAULT_CONFIG, enabledSources: [...DEFAULT_CONFIG.enabledSources] };
